@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<style type="text/css">
+		* {
+		      margin: 0;
+		      padding: 0;
+		      font-family: 微软雅黑;
+         }
+	    body{
+	      text-align: center;
+	      background: #000;
+	    }
+	    canvas{
+	      background: url("img/game_bg_2_hd.jpg");
+	    }
+		</style>
+	</head>
+	<body>
+		<canvas id="c1" width="800" height="600"></canvas>
+	</body>
+</html>
+<script src="js/Fish.js"></script>
+<script src="js/Cannon.js"></script>
+<script src="js/Bullet.js"></script>
+<script src="js/web.js"></script>
+<script src="js/coin.js"></script>
+<script src="js/DieFish.js"></script>
+<script src="js/Shark.js"></script>
+<script src="js/Dieshark.js"></script>
+<script src="js/score.js"></script>
+<script>
+	function rnd(n,m){
+      return parseInt(Math.random()*(m-n))+n;
+    }
+    function fillzero(n){
+      return n<10?'0'+n:''+n;
+    }
+    function d2a(n){
+      return n*Math.PI/180;
+    }
+    function a2d(n){
+      return n*180/Math.PI;
+    }
+    
+	const resource=[
+      'fish1','fish2','fish3','fish4','fish5','shark1','shark2', 
+      'cannon1','cannon2','cannon3','cannon4','cannon5','cannon6','cannon7',
+      'bottom','bullet','coinAni1','coinAni2','web','number_black',
+    ];
+	
+	var JSON={}
+	var _json={}
+	function loadImage(arr,success,loading){
+	 var count=0
+	  for(var i=0;i<arr.length;i++){
+		 (function(index){
+		 	var oImg=new Image()
+			oImg.onload=function(){
+		     	count++
+		     	JSON[arr[index]]=this
+		     	loading&&loading(count,arr.length)
+			    if(count==arr.length){
+			      success && success()	
+			    }
+			}
+		   oImg.src="img/"+arr[index]+".png"	
+		 })(i)
+	  }
+	}
+	
+	window.onload=function(){
+		var oC=document.querySelector("#c1")
+		var gd=oC.getContext("2d")
+		loadImage(resource,function(){
+		  var c=new  Cannon()
+		  var arrFish=[]
+		  var arrBullet=[]
+		  var arrWeb=[]
+		  var arrCoin=[]
+		  var arrdieFish=[]
+		  var arrShark=[]
+		  var arrDieshark=[]
+		  var arrScore=[]
+		  var web=new Web(c.type)
+		  var coin=new Coin(1)
+		  var count=0
+		  var hitcount=0
+		  var score=new Score()
+		 setInterval(function(){
+			 gd.clearRect(0,0,oC.width,oC.height)//擦除
+			    //画鱼	
+			    if(Math.random()<0.02){
+				 var f=new Fish(rnd(1,6))
+				 arrFish.push(f)
+				 if(Math.random()<0.5){
+				 	f.x=0
+				    f.rotate=rnd(-45,45)
+				 }else{
+				 	f.x=oC.width
+				    f.rotate=rnd(135,225)
+				 }
+				 f.y=rnd(100,oC.height-100)
+			    	
+			    }
+				for(var i=0;i<arrFish.length;i++){
+					arrFish[i].draw(gd)
+				}
+		   
+		   //画鲨鱼
+		    for(var i=0;i<arrShark.length;i++){
+			  arrShark[i].draw(gd)
+			}
+		    
+		   //画死鲨鱼
+	        for(var i=0;i<arrDieshark.length;i++){
+	          arrDieshark[i].draw(gd)
+	        }
+				
+			//画炮台
+			gd.drawImage(JSON['bottom'],
+	           0,0,765,70,
+	           0,532,765,70
+	        );
+			
+			//画计分表
+			for(var i=0;i<arrScore.length;i++){
+				arrScore[i].drawF(gd)
+				arrScore[i].drawS(gd)
+				arrScore[i].drawT(gd)
+				arrScore[i].drawFo(gd)
+				arrScore[i].drawFi(gd)
+				arrScore[i].drawSi(gd)
+			}
+			
+			//画加减
+			gd.drawImage(JSON['bottom'],
+	            47,76,37,27,
+	            c.x-70,c.y-10,37,27
+	       );
+			gd.drawImage(JSON['bottom'],
+	            136,76,37,27,
+	            c.x+40,c.y-10,37,27
+	        );	
+					
+			//画子弹
+			for(var i=0;i<arrBullet.length;i++){
+			  	arrBullet[i].draw(gd)  	
+			}
+			//画炮筒
+            c.draw(gd)
+			
+		  //优化子弹
+		  for(var i=0;i<arrBullet.length;i++){
+		  	if(
+		     arrBullet[i].x<-100||
+		     arrBullet[i].x>oC.width+100||
+		     arrBullet[i].y<-100||
+		     arrBullet[i].y>oC.height+100
+		  	){
+		  		clearInterval(arrBullet[i].timer)
+		  		arrBullet.splice(i--,1) 
+		  	}
+		  }
+		  
+		  //优化普通鱼
+		  for(var i=0;i<arrFish.length;i++){
+		  	if(
+		  	 arrFish[i].x<-100||
+		     arrFish[i].x>oC.width+100||
+		     arrFish[i].y<-100||
+		     arrFish[i].y>oC.height+100
+		  	){
+		  		clearInterval(arrFish[i].timer)
+		  		arrFish.splice(i--,1) 
+		  	}
+		  }
+		  
+		  //优化鲨鱼
+		  for(var i=0;i<arrShark.length;i++){
+		  	if(
+		  	 arrShark[i].x<-500||
+		     arrShark[i].x>oC.width+500||
+		     arrShark[i].y<-500||
+		     arrShark[i].y>oC.height+500
+		  	){
+		  		clearInterval(arrShark[i].timer)
+		  		arrShark.splice(i--,1) 
+		  	}
+		  }
+		  
+		 
+		  //碰撞检测
+		 for(var i=0;i<arrFish.length;i++){
+		 	for(var j=0;j<arrBullet.length;j++){
+		 	 var a=arrFish[i].x-arrBullet[j].x
+		 	 var b=arrFish[i].y-arrBullet[j].y
+		 	 var d=Math.sqrt(a*a+b*b)
+		 	 if(d<arrFish[i].collR){
+		 	 	//分数累计，累计至10 鲨鱼出现
+		 	 	count++
+		 	 	//积分
+		 	 	score.numSi--
+		 	 	if(score.numSi==0){
+		 	 		score.numSi=9
+		 	 		score.numFi--
+		 	 		if(score.numFi==0){
+		 	 			score.numFi=9
+		 	 			score.numFo--
+		 	 			if(score.numFo==0){
+		 	 				score.numFo=9
+		 	 				score.numT--
+		 	 				if(score.numT==0){
+		 	 					score.numT=9
+		 	 					score.numS--
+		 	 					if(score.numS==0){
+		 	 						score.numS=9
+		 	 					}
+		 	 				}
+		 	 			}
+		 	 		}
+		 	 	}
+		 	 	arrScore.push(score)
+
+		 	 	
+		 	 	//出网
+		 	 	web.x=arrFish[i].x
+		 	 	web.y=arrFish[i].y
+		 	 	web.type=c.type
+		 	 	web.scale=0.5
+		 	 	arrWeb.push(web)
+		 	 	
+		 	    //出金币
+		 	 	coin.x=arrFish[i].x
+		 	 	coin.y=arrFish[i].y
+		 	 	arrCoin.push(coin)
+		 	 	
+		 	 	//出死鱼
+		 	 	var diefish=new DieFish(arrFish[i].type)
+		 	 	diefish.x=arrFish[i].x
+		 	 	diefish.y=arrFish[i].y
+		 	 	diefish.rotate=arrFish[i].rotate
+		 	 	arrdieFish.push(diefish)
+		 	 	
+		 	 	
+	   	  		clearInterval(arrFish[i].timer)
+	   	  		arrFish.splice(i,1)
+	   	  		clearInterval(arrBullet[j].timer)
+	   	  		arrBullet.splice(j,1)
+	   	  	}
+		  }
+		 }
+		 
+		 
+		 //累计一定的分数 鲨鱼出现
+		 if(count>=10){
+		 	count=0
+				var shark=new Shark(1)
+				arrShark.push(shark)
+			 	if(Math.random()<0.5){
+				 	 shark.x=-300
+				 	 shark.rotate=rnd(-45,45)
+			 	}else{
+				 	 shark.x=oC.width+300
+				 	 shark.rotate=rnd(135,225)
+			 	}
+			 	 	shark.y=rnd(300,oC.height-300)
+		 }
+		 	 	
+		
+		  
+		  //鲨鱼碰撞检测
+		  for(var i=0;i<arrShark.length;i++){
+		  	for(var j=0;j<arrBullet.length;j++){
+		  		 var sharka=arrShark[i].x-arrBullet[j].x
+		 	     var sharkb=arrShark[i].y-arrBullet[j].y
+		 	     var sharkd=Math.sqrt(sharka*sharka+sharkb*sharkb)
+                if(sharkd<arrShark[i].collR){
+                	hitcount++
+                	
+                	//积分
+                score.numSi-=4
+		 	 	if(score.numSi<=0){
+		 	 		score.numSi=9
+		 	 		score.numFi--
+		 	 		if(score.numFi==0){
+		 	 			score.numFi=9
+		 	 			score.numFo--
+		 	 			if(score.numFo==0){
+		 	 				score.numFo=9
+		 	 				score.numT--
+		 	 				if(score.numT==0){
+		 	 					score.numT=9
+		 	 					score.numS--
+		 	 					if(score.numS==0){
+		 	 						score.numS=9
+		 	 					}
+		 	 				}
+		 	 			}
+		 	 		}
+		 	 	}
+                	 //出网
+			 	 	web.x=arrShark[i].x
+			 	 	web.y=arrShark[i].y
+			 	 	web.type=c.type
+			 	 	web.scale=0.5
+			 	 	arrWeb.push(web)
+		 	 	     //出金币
+		 	 	     coin.x=arrShark[i].x
+				 	 coin.y=arrShark[i].y
+				 	 arrCoin.push(coin)
+		 	 	     
+	                clearInterval(arrBullet[j].timer)
+		   	  		arrBullet.splice(j,1)
+		   	  		  if(hitcount==8){
+		   	  		  	clearInterval(arrShark[i].timer)
+		   	  		  	hitcount=0
+	   	  		  	    
+	   	  		  	    //出死鲨鱼
+			   	  		var dieshark=new DieShark(arrShark[i].type)
+				 	 	dieshark.x=arrShark[i].x
+				 	 	dieshark.y=arrShark[i].y
+				 	 	dieshark.rotate=arrShark[i].rotate
+				 	 	arrDieshark.push(dieshark)
+		   	  		  	
+		 
+			   	  		arrShark.splice(i,1)	
+	   	  		  }
+                }
+		  	}
+		  }
+		  
+		  //画死鱼
+          for(var i=0;i<arrdieFish.length;i++){
+          	arrdieFish[i].draw(gd)
+          }
+         
+		  //画网
+		  for(var i=0;i<arrWeb.length;i++){
+			   arrWeb[i].draw(gd)
+			   setTimeout(function(){
+			   	arrWeb=[]
+			   },300)
+		  }
+		  //画金币
+		  for(var i=0;i<arrCoin.length;i++){
+		  	arrCoin[i].draw(gd)
+		  	setTimeout(function(){
+		   	arrCoin=[]
+		   },300)
+		  }
+	},16)
+             
+            oC.onclick=function(e){    
+               //检测加减
+               if(
+     	e.pageX>(oC.offsetLeft+361)&&e.pageX<(oC.offsetLeft+398)&&e.pageY>560&&e.pageY<587
+               ){
+                c.type++
+                if(c.type>=7){
+                	c.type=7;
+                }
+               }else if(
+     	e.pageX>(oC.offsetLeft+471)&&e.pageX<(oC.offsetLeft+508)&&e.pageY>560&&e.pageY<587
+               ){
+               	c.type--
+               	if(c.type<=1){
+               		c.type=1;
+               	}
+               }else{
+                var x=e.pageX-oC.offsetLeft-c.x
+                var y=c.y-e.pageY-oC.offsetTop
+                var d=Math.atan2(x,y)
+                c.rotate=a2d(d)
+            	c.emit() 
+     	      //创建子弹
+     	       var b=new Bullet(c.type)
+     	       	b.rotate=c.rotate
+     	       	b.x=c.x
+     	       	b.y=c.y
+     	       	arrBullet.push(b)
+               	
+               }
+            }
+	})
+				
+}
+	
+</script>
